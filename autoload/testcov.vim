@@ -40,8 +40,11 @@ if has('python3')
       return
     endif
 
+    let s:simplecov_path2coverage = {}
     for [_, suite] in items(py3eval("json.load(open(vim.eval('a:file')))"))
-      let s:simplecov_path2coverage = suite['coverage']
+      for [path, coverage] in items(suite['coverage'])
+        let s:simplecov_path2coverage[path] = coverage
+      endfor
     endfor
   endfunction
 
