@@ -17,5 +17,5 @@ if !exists("g:testcov_sign_covered")
   let g:testcov_sign_covered = "✓"
 endif
 if !exists("g:testcov_sign_uncovered")
-  let g:testcov_sign_uncovered = "✘"
+  let g:testcov_sign_uncovered = "X"
 endif
