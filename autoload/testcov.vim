@@ -6,12 +6,17 @@ call sign_define('testcov_uncovered', {'text': g:testcov_sign_uncovered, 'texthl
 function! testcov#Mark(file_pattern = '%')
   if &filetype == 'ruby'
     call s:simplecov_redo_marks(a:file_pattern)
+  elseif &filetype == 'cpp' || &filetype == 'c'
+    call s:gcov_redo_marks(a:file_pattern)
   endif
 endfunction
 
 function! testcov#Refresh(framework='')
   if empty(a:framework) || a:framework == 'SimpleCov'
     call s:simplecov_load(g:testcov_simplecov_path)
+  endif
+  if empty(a:framework) || a:framework == 'gcov'
+    call s:gcov_search_and_discard_caches(g:testcov_gcov_root)
   endif
   call testcov#Mark()
 endfunction
@@ -30,6 +35,33 @@ function! s:mark_line_coverage(file_pattern, linenr, hits)
     let sign_name = 'testcov_covered'
   endif
   call sign_place(0, 'testcov', sign_name, a:file_pattern, {'lnum': a:linenr, 'priority': g:testcov_sign_priority})
+endfunction
+
+let s:gcov_source2line2hits = {}
+function! s:gcov_search_and_discard_caches(gcov_root)
+  let gcov_notes = glob(a:gcov_root.'/**/*.gcno', 0, 1)
+  let s:gcov_source2line2hits = {}
+  for line in systemlist('gcov --stdout '.join(gcov_notes, " "))
+    let maybe_filename = matchlist(line, '0:Source:\(.*\)')
+    if !empty(maybe_filename)
+      let current_line2hits = get(s:gcov_source2line2hits, maybe_filename[1], {})
+      let s:gcov_source2line2hits[maybe_filename[1]] = current_line2hits
+      continue
+    endif
+    let tag_linenr = matchlist(line, '^[ ]*\([#0-9]\+\)\*\?:[ ]*\([0-9]\+\):')
+    if !empty(tag_linenr) && tag_linenr[2] != 0
+      let current_line2hits[tag_linenr[2]] = get(current_line2hits, tag_linenr[2], 0) + str2nr(tag_linenr[1])
+    endif
+  endfor
+endfunction
+
+function! s:gcov_redo_marks(file_pattern)
+  let full_path = fnamemodify(expand(a:file_pattern), ':p')
+  call s:reset_coverage_signs(a:file_pattern)
+
+  for [linenr, hits] in items(get(s:gcov_source2line2hits, full_path, {}))
+    call s:mark_line_coverage(a:file_pattern, linenr, hits)
+  endfor
 endfunction
 
 

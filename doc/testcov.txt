@@ -17,6 +17,7 @@ not by the latest test run. It can read the test coverage reports created by
 the following test analysis frameworks:
 
     - SimpleCov (Ruby 1.9+)
+    - gcov (C/C++)
 
 ==============================================================================
 2. Commands                                                 *Testcov-commands*
@@ -52,5 +53,10 @@ Sets the |sign-priority| Testcov assigns to its signs.
 Default: "coverage/.resultset.json"
 
 Specify the path to look for Ruby SimpleCov test coverage results.
+
+                                                         *g:testcov_gcov_root*
+Default: "./"
+
+Where to recursively search for gcov note files.
 
 vim: ft=help

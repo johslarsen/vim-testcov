@@ -9,6 +9,9 @@ command -nargs=? -complete=file TestcovMark call testcov#Mark(<f-args>)
 if !exists("g:testcov_simplecov_path")
   let g:testcov_simplecov_path = "coverage/.resultset.json"
 endif
+if !exists("g:testcov_gcov_root")
+  let g:testcov_gcov_root = "./"
+endif
 
 if !exists("g:testcov_sign_priority")
   let g:testcov_sign_priority = 10

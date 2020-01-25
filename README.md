@@ -4,6 +4,7 @@ A VIM plguing to display test coverage display in the sign column.
 Supported test coverage frameworks:
 
 * SimpleCov (Ruby 1.9+)
+* gcov (C/C++)
 
 ## Installation
 
