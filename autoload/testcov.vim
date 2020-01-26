@@ -16,7 +16,7 @@ function! testcov#Refresh(framework='')
     call s:simplecov_load(g:testcov_simplecov_path)
   endif
   if empty(a:framework) || a:framework == 'gcov'
-    call s:gcov_search_and_discard_caches(g:testcov_gcov_root)
+    call s:gcov_load(g:testcov_gcov_root)
   endif
   call testcov#Mark()
 endfunction
@@ -37,35 +37,25 @@ function! s:mark_line_coverage(file_pattern, linenr, hits)
   call sign_place(0, 'testcov', sign_name, a:file_pattern, {'lnum': a:linenr, 'priority': g:testcov_sign_priority})
 endfunction
 
-let s:gcov_source2line2hits = {}
-function! s:gcov_search_and_discard_caches(gcov_root)
-  let gcov_notes = glob(a:gcov_root.'/**/*.gcno', 0, 1)
-  let s:gcov_source2line2hits = {}
-  for line in systemlist('gcov --stdout '.join(gcov_notes, " "))
-    let maybe_filename = matchlist(line, '0:Source:\(.*\)')
-    if !empty(maybe_filename)
-      let current_line2hits = get(s:gcov_source2line2hits, maybe_filename[1], {})
-      let s:gcov_source2line2hits[maybe_filename[1]] = current_line2hits
-      continue
-    endif
-    let tag_linenr = matchlist(line, '^[ ]*\([#0-9]\+\)\*\?:[ ]*\([0-9]\+\):')
-    if !empty(tag_linenr) && tag_linenr[2] != 0
-      let current_line2hits[tag_linenr[2]] = get(current_line2hits, tag_linenr[2], 0) + str2nr(tag_linenr[1])
-    endif
-  endfor
-endfunction
-
-function! s:gcov_redo_marks(file_pattern)
-  let full_path = fnamemodify(expand(a:file_pattern), ':p')
-  call s:reset_coverage_signs(a:file_pattern)
-
-  for [linenr, hits] in items(get(s:gcov_source2line2hits, full_path, {}))
-    call s:mark_line_coverage(a:file_pattern, linenr, hits)
-  endfor
-endfunction
-
 
 if has('python3')
+  py3file <sfile>:p:h/gcov.py
+  let s:gcov_src2line2hits = {}
+  function! s:gcov_load(gcov_root)
+    let gcnos = glob(a:gcov_root.'/**/*.gcno', 0, 1)
+    let s:gcov_src2line2hits = py3eval('gcov_src2line2hits(["'.join(gcnos, '","').'"], "'.getcwd().'")')
+  endfunction
+
+  function! s:gcov_redo_marks(file_pattern)
+    let full_path = fnamemodify(expand(a:file_pattern), ':p')
+    call s:reset_coverage_signs(a:file_pattern)
+
+    for [linenr, hits] in items(get(s:gcov_src2line2hits, full_path, {}))
+      call s:mark_line_coverage(a:file_pattern, linenr, hits)
+    endfor
+  endfunction
+
+
   py3 import json
   let s:simplecov_path2coverage = {}
 
@@ -99,11 +89,13 @@ if has('python3')
       let linenr += 1
     endfor
   endfunction
-else " no python, so define SimpleCov no-ops:
+else " no python, so define no-ops for functionality that depends on it
   function! s:simplecov_load(path)
-    return
   endfunction
   function! s:simplecov_redo_marks()
-    return
+  endfunction
+  function! s:gcov_load(gcov_root)
+  endfunction
+  function! s:gcov_redo_marks(file_pattern)
   endfunction
 endif
