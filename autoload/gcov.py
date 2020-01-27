@@ -4,12 +4,12 @@ import re
 import os
 import struct
 import subprocess
-def gcov_src2line2hits(gcno_paths, prefix_filter="/"):
+def gcov_src2line2hits(gcno_paths, prefix_filter="/", cwd_fallback="."):
     src2line2hits = {}
     cwd2gcnos = {}
     for gcno in gcno_paths:
         if gcno:
-            cwd2gcnos.setdefault(gcno_cwd(gcno), set()).add(os.path.abspath(gcno))
+            cwd2gcnos.setdefault(gcno_cwd(gcno, cwd_fallback), set()).add(os.path.abspath(gcno))
 
     for cwd, gcnos in cwd2gcnos.items():
         with subprocess.Popen(["gcov", "--stdout"] + list(gcnos), stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd) as proc:
@@ -38,9 +38,13 @@ def gcov_output_parser(gcov_pipe, cwd, src2line2hits, prefix_filter="/"):
             nr = tag_linenr.group(2)
             line2hits[nr] = line2hits.get(nr, 0) + (int(tag) if tag[0] != '#' else 0)
 
-def gcno_cwd(gcno_path):
+def gcno_cwd(gcno_path, fallback="."):
     with open(gcno_path, "rb") as f:
-        f.seek(12)
+        f.seek(4)
+        version = gcno_read_uint32(f)
+        if (version < 0x41393100): # GCC 9.1.0
+            return os.path.abspath(fallback)
+        f.seek(4, 1)
         return gcno_read_str(f)
 
 def gcno_absolute_path(cwd, path):

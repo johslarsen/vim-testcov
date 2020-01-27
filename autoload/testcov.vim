@@ -43,7 +43,7 @@ if has('python3')
   let s:gcov_src2line2hits = {}
   function! s:gcov_load(gcov_root)
     let gcnos = glob(a:gcov_root.'/**/*.gcno', 0, 1)
-    let s:gcov_src2line2hits = py3eval('gcov_src2line2hits(["'.join(gcnos, '","').'"], "'.getcwd().'")')
+    let s:gcov_src2line2hits = py3eval('gcov_src2line2hits(["'.join(gcnos, '","').'"], "'.getcwd().'", "'.a:gcov_root.'")')
   endfunction
 
   function! s:gcov_redo_marks(file_pattern)
