@@ -24,7 +24,7 @@ def gcov_output_parser(gcov_pipe, cwd, src2line2hits, prefix_filter="/"):
         line = gcov_pipe.stdout.readline()
         if not line:
             break
-        line = line.decode()
+        line = line.decode("UTF-8", "ignore")
         maybe_filename = re_source.match(line)
         if maybe_filename:
             src = gcno_absolute_path(cwd, maybe_filename.group(1))
@@ -52,4 +52,4 @@ def gcno_read_uint32(gcno_file):
 
 def gcno_read_str(gcno_file):
     strlen_in_word = gcno_read_uint32(gcno_file)
-    return gcno_file.read(strlen_in_word*4).decode().rstrip("\x00")
+    return gcno_file.read(strlen_in_word*4).decode("UTF-8", "ignore").rstrip("\x00")
