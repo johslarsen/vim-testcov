@@ -11,9 +11,20 @@ def gcov_src2line2hits(gcno_paths, prefix_filter="/", cwd_fallback="."):
         if gcno:
             cwd2gcnos.setdefault(gcno_cwd(gcno, cwd_fallback), set()).add(os.path.abspath(gcno))
 
+    gcov_cmd = ["gcov"] # configurable? or maybe based on .gcno metadata?
+
+    gcov_supports_stdout = os.system(' '.join(gcov_cmd) + " --help 2>/dev/null| grep -- --stdout &>/dev/null") == 0
+
     for cwd, gcnos in cwd2gcnos.items():
-        with subprocess.Popen(["gcov", "--stdout"] + list(gcnos), stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd) as proc:
-            gcov_output_parser(proc, cwd, src2line2hits, os.path.abspath(prefix_filter))
+        if gcov_supports_stdout:
+            cmd = gcov_cmd + ["--stdout"] + list(gcnos)
+            with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, cwd=cwd) as proc:
+                gcov_output_parser(proc, cwd, src2line2hits, os.path.abspath(prefix_filter))
+        else:
+            subprocess.call(gcov_cmd + ["-p"] + list(gcnos), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            gcovs = glob.glob(cwd+"/*.gcov")
+            with subprocess.Popen(["cat"] + gcovs, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL) as proc:
+                gcov_output_parser(proc, cwd, src2line2hits, os.path.abspath(prefix_filter))
     return src2line2hits
 
 def gcov_output_parser(gcov_pipe, cwd, src2line2hits, prefix_filter="/"):
