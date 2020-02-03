@@ -3,19 +3,21 @@ highlight default TestcovUncoveredSign ctermfg=red
 call sign_define('testcov_covered', {'text': g:testcov_sign_covered, 'texthl': 'TestcovCoveredSign'})
 call sign_define('testcov_uncovered', {'text': g:testcov_sign_uncovered, 'texthl': 'TestcovUncoveredSign'})
 
-function! testcov#Mark(file_pattern = '%')
+function! testcov#Mark(...)
+  let file_pattern = a:0 >= 1 ? a:1 : "%"
   if &filetype == 'ruby'
-    call s:simplecov_redo_marks(a:file_pattern)
+    call s:simplecov_redo_marks(file_pattern)
   elseif &filetype == 'cpp' || &filetype == 'c'
-    call s:gcov_redo_marks(a:file_pattern)
+    call s:gcov_redo_marks(file_pattern)
   endif
 endfunction
 
-function! testcov#Refresh(framework='')
-  if empty(a:framework) || a:framework == 'SimpleCov'
+function! testcov#Refresh(...)
+  let framework = a:0 >= 1 ? a:1 : ''
+  if empty(framework) || framework == 'SimpleCov'
     call s:simplecov_load(g:testcov_simplecov_path)
   endif
-  if empty(a:framework) || a:framework == 'gcov'
+  if empty(framework) || framework == 'gcov'
     call s:gcov_load(g:testcov_gcov_root)
   endif
   call testcov#Mark()
