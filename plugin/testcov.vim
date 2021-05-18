@@ -12,6 +12,9 @@ endif
 if !exists("g:testcov_gcov_root")
   let g:testcov_gcov_root = "./"
 endif
+if !exists("g:testcov_sancov_root")
+  let g:testcov_sancov_root = "./"
+endif
 
 if !exists("g:testcov_sign_priority")
   let g:testcov_sign_priority = 10

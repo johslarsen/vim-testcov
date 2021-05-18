@@ -8,10 +8,14 @@ function! testcov#Mark(...)
   if &filetype == 'ruby'
     call s:simplecov_redo_marks(file_pattern)
   elseif &filetype == 'cpp' || &filetype == 'c'
-    call s:gcov_redo_marks(file_pattern)
+    call s:reset_coverage_signs(file_pattern)
+    call s:src2line2hits_marks(s:gcov_src2line2hits, file_pattern)
+    call s:src2line2hits_marks(s:sancov_src2line2hits, file_pattern)
   endif
 endfunction
 
+let s:gcov_src2line2hits = {}
+let s:sancov_src2line2hits = {}
 function! testcov#Refresh(...)
   let framework = a:0 >= 1 ? a:1 : ''
   if empty(framework) || framework == 'SimpleCov'
@@ -19,6 +23,9 @@ function! testcov#Refresh(...)
   endif
   if empty(framework) || framework == 'gcov'
     call s:gcov_load(g:testcov_gcov_root)
+  endif
+  if empty(framework) || framework == 'sancov'
+    call s:sancov_load(g:testcov_sancov_root)
   endif
   call testcov#Mark()
 endfunction
@@ -39,28 +46,34 @@ function! s:mark_line_coverage(file_pattern, linenr, hits)
   call sign_place(0, 'testcov', sign_name, a:file_pattern, {'lnum': a:linenr, 'priority': g:testcov_sign_priority})
 endfunction
 
+function! s:src2line2hits_marks(src2line2hits, file_pattern)
+  let full_path = fnamemodify(expand(a:file_pattern), ':p')
+  for [linenr, hits] in items(get(a:src2line2hits, full_path, {}))
+    call s:mark_line_coverage(a:file_pattern, linenr, hits)
+  endfor
+endfunction
 
 if has('python3')
   py3file <sfile>:p:h/gcov.py
-  let s:gcov_src2line2hits = {}
   function! s:gcov_load(gcov_root)
     let gcnos = glob(a:gcov_root.'/**/*.gcno', 0, 1)
     let s:gcov_src2line2hits = py3eval('gcov_src2line2hits(["'.join(gcnos, '","').'"], "'.getcwd().'")')
   endfunction
-
   function! s:gcov_redo_marks(file_pattern)
-    let full_path = fnamemodify(expand(a:file_pattern), ':p')
-    call s:reset_coverage_signs(a:file_pattern)
-
-    for [linenr, hits] in items(get(s:gcov_src2line2hits, full_path, {}))
-      call s:mark_line_coverage(a:file_pattern, linenr, hits)
-    endfor
+    call s:redo_src2line2hits_marks(s:gcov_src2line2hits, a:file_pattern)
   endfunction
 
+  py3file <sfile>:p:h/sancov.py
+  function! s:sancov_load(sancov_root)
+    let sancovs = glob(a:sancov_root.'**/*.sancov', 0, 1)
+    let s:sancov_src2line2hits = py3eval('sancov_src2line2hits(["'.join(sancovs, '","').'"])')
+  endfunction
+  function! s:sancov_redo_marks(file_pattern)
+    call s:redo_src2line2hits_marks(s:sancov_src2line2hits, a:file_pattern)
+  endfunction
 
   py3 import json
   let s:simplecov_path2coverage = {}
-
   function! s:simplecov_load(file)
     if !filereadable(a:file)
       return
@@ -73,7 +86,6 @@ if has('python3')
       endfor
     endfor
   endfunction
-
   function! s:simplecov_redo_marks(file_pattern)
     let full_path = fnamemodify(expand(a:file_pattern), ':p')
     call s:reset_coverage_signs(a:file_pattern)
@@ -98,6 +110,6 @@ else " no python, so define no-ops for functionality that depends on it
   endfunction
   function! s:gcov_load(gcov_root)
   endfunction
-  function! s:gcov_redo_marks(file_pattern)
+  function! s:sancov_load(file)
   endfunction
 endif
